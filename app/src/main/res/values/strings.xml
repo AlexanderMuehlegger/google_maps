@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Google_Maps</string>
+    <string name="title_activity_maps">MapsActivity</string>
+    <string name="app_key">f8585fa4-e1a4-40dc-b07f-1dc2a9281ae4</string>
+    <string name="url_get">https://os-beyond.at/htl/geo/geoinfos/</string>
+    <string name="url_put">https://os-beyond.at/htl/geo/geoinfo/0</string>
+</resources>
