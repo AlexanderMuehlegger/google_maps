@@ -22,13 +22,11 @@ public class location_Activit extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location);
 
-        //Settings how frequently updates should be fetched
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(5000); //this is the lowest rate at which update is called
+        locationRequest.setFastestInterval(5000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        //this callback is periodically called
         LocationCallback mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {

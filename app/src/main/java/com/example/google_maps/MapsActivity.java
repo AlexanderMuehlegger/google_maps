@@ -4,7 +4,6 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -24,8 +23,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 
-import lombok.Data;
-import lombok.Getter;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -40,8 +37,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private int markerCnt = 0;
     private String appKey = "";
     private final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    private double _lat = 48.210033;
-    private double _long = 16.363449;
+    private double _lat = 51.5078;
+    private double _long = 5.3978;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +47,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -67,18 +63,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Innsbruck and move the camera
-        LatLng ibk = new LatLng(47.259659,11.400375);
+        LatLng ibk = new LatLng(47.4726318,11.9864509);
         mMap.addMarker(new MarkerOptions().position(ibk).title("Marker in Innsbruck"));
 
-
         mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-        //mMap.moveCamera(CameraUpdateFactory.newLatLng(ibk));
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ibk,10)); //Values from 2 to 21 possible
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ibk,10));
         mMap.setOnMapClickListener(this);
         mMap.setOnMarkerClickListener(this);
 
@@ -98,7 +92,62 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void getEveryMarker(View view) {
         GetServerAsyncTask asyncTask = new GetServerAsyncTask();
-        asyncTask.doInBackground("kdkdk");
+        asyncTask.execute("");
+    }
+
+    public void putMarker(View view) {
+        PutServerAsyncTask putTask = new PutServerAsyncTask();
+        putTask.execute();
+    }
+
+    private class GetServerAsyncTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... urls) {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                .url(getString(R.string.url_get))
+                .addHeader("Accept", "application/json")
+                .addHeader("appkey", appKey)
+                .get()
+                .build();
+
+            Response response = null;
+
+            try {
+                response = client.newCall(request).execute();
+            } catch (IOException e) {
+                e.printStackTrace();
+                response = null;
+            }
+
+            if (response != null && response.isSuccessful()) {
+                try {
+                    return response.body().string();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return "Loading Data Failed";
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            result = result.replaceAll("long", "_long");
+            result = result.replaceAll("lat", "_lat");
+
+            Gson gson = new Gson();
+            Data[] data = gson.fromJson(result, Data[].class);
+
+            for(int i = 0; i < data.length; i++) {
+                mMap.addMarker(new MarkerOptions().position(new LatLng(data[i].get_lat(), data[i].get_long())).title(data[i].getName()));
+            }
+        }
+
     }
 
     private class PutServerAsyncTask extends AsyncTask<String, Void, String> {
@@ -107,33 +156,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             OkHttpClient client = new OkHttpClient();
             JSONObject jsonObject = new JSONObject();
+
             try {
                 jsonObject.put("info", new JSONObject()
                         .put("lat", _lat)
                         .put("long", _long)
                         .put("message", "test")
                         .put("name", "Alex"));
+
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
                 String json = gson.toJson(jsonObject);
-                Log.d("JSON", json);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+
             RequestBody body = RequestBody.create(jsonObject.toString(), JSON);
-            Request request =
-                    new Request.Builder()
-                            .url(getString(R.string.url_put))
-                            .addHeader("Accept", "application/json")
-                            .addHeader("appkey", appKey)
-                            .put(body)
-                            .build();
+            Request request = new Request.Builder()
+                    .url(getString(R.string.url_put))
+                    .addHeader("Accept", "application/json")
+                    .addHeader("appkey", appKey)
+                    .put(body)
+                    .build();
+
             Response response = null;
+
             try {
                 response = client.newCall(request).execute();
             } catch (IOException e) {
                 e.printStackTrace();
                 response = null;
             }
+
             if (response != null && response.isSuccessful()) {
                 try {
                     return response.body().string();
@@ -157,53 +210,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             feedback.append("\n");
             feedback.append(String.format("TITLE: %s\n",data.getName()));
         }
-    }
-
-    private class GetServerAsyncTask extends AsyncTask<String, Void, String> {
-        @Override
-        protected String doInBackground(String... urls) {
-            OkHttpClient client = new OkHttpClient();
-            Request request =
-                    new Request.Builder()
-                            .url(getString(R.string.url_get))
-                            .addHeader("Accept", "application/json")
-                            .addHeader("appkey", appKey)
-                            .get()
-                            .build();
-            Response response = null;
-            try {
-                response = client.newCall(request).execute();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (response.isSuccessful()) {
-                try {
-                    return response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            return "Download failed";
-        }
-
-        @Override
-        protected void onProgressUpdate(Void... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            result = result.replaceAll("long", "_long");
-            result = result.replaceAll("lat", "_lat");
-            Log.d("result", result);
-            Gson gson = new Gson();
-            Data[] data = gson.fromJson(result, Data[].class);
-            for(int i = 0; i < data.length; i++) {
-
-                mMap.addMarker(new MarkerOptions().position(new LatLng(data[i].get_lat(), data[i].get_long())).title(String.format("Marker %d", ++markerCnt)));
-            }
-        }
-
     }
     class Data {
         private int id;
